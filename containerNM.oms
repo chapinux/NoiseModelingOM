@@ -1,0 +1,69 @@
+val output_dir = Val[File]
+val input_dir = Val[File]
+
+
+val confMaxSrcDist = Val[Int]
+val ReflDist= Val[Int]
+
+val OccProb= Val[String] 
+val airTemp=Val[Double] 
+val humidity=Val[Double] 
+val dem=Val[Boolean]
+val diffHor=Val[Boolean]
+val diffVer=Val[Boolean] 
+val refOrd=Val[Int]
+val wallAlpha=Val[Double] 
+val fastCompute=Val[Boolean]
+
+
+
+val container = 
+  ContainerTask(
+    image = "adoptopenjdk/openjdk11",
+    //commande de lancement 
+    command = """
+    cd localNoisemodeling ;
+    
+    mkdir ../results;
+    bash ./bin/wps_scripts.sh -w./ -sRunAll.groovy input_dir=Input/StMartin/ output_dir=../results/ fastCompute=true confMaxSrcDist=${confMaxSrcDist} ReflDist=${ReflDist} OccProb=${OccProb} airTemp=${airTemp} humidity=${humidity} dem=${dem} diffHor=${diffHor} diffVer=${diffVer} refOrd=${refOrd} wallAlpha=${wallAlpha} fastCompute=${fastCompute};
+    """,
+    install = Seq("apt update", "apt install -y bash"),
+   
+  ) set (
+    resources += (workDirectory / "NoiseModeling", "localNoisemodeling"),
+    // quand le resultat de l'exec est à la racine , ça marche 
+    outputFiles += ( "results" , output_dir),
+    //inputFiles += (),
+    inputs +=(confMaxSrcDist, ReflDist),
+    outputs +=(confMaxSrcDist, ReflDist),
+    confMaxSrcDist := 20000,
+    ReflDist := 50,
+    OccProb:="SO",
+    airTemp:=15,
+    humidity:=70,
+    dem:=false,
+    diffHor:=true,
+    diffVer:=true,
+    refOrd:=2,
+    wallAlpha := 0.2,
+    fastCompute:=false
+    
+  )
+
+
+
+val exploSimple = DirectSampling(
+    evaluation = container, // here we evaluate the Replication task for each value of the sampling
+    sampling =
+        (ReflDist in (40 to 50 by 10)) x
+        (confMaxSrcDist in (200 to 250 by 50))
+)
+
+ 
+
+exploSimple hook CopyFileHook(output_dir, workDirectory / "result/run_${ReflDist}_confMax_${confMaxSrcDist}")
+
+//container hook CopyFileHook(output_dir, workDirectory / "result/run_${ReflDist}_confMax_${confMaxSrcDist}")
+
+
+

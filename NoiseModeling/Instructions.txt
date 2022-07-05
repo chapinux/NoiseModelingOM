@@ -1,0 +1,25 @@
+POUR LANCER NM PAR JAVA
+1- Installer v11 JAVA 
+2- Définir la variable d'environnement (soit par Windows soit par invite de commandes : setx JAVA_HOME  "C:\\Program Files (x86)\\Java\\jre.1.8.x_x")
+3- Vérifier que l'invite de commandes prenne bien la nouvelle version JAVA (echo %JAVA_HOME%)
+4- Lancer le calcul avec .\bin\wps_scripts -w.\ -sRunAll.groovy input_dir=Input\StMartin\ output_dir=Output\StMartin\ fastCompute=true confMaxSrcDist=200 ReflDist=50
+5- Enjoy!
+
+
+Lien vers doc : https://noisemodelling.readthedocs.io/en/latest/Requirements.html
+
+Paramètres à faire varier
+-ProbOcc Y
+-DEM* 
+-Diffractions Y
+-MaxRef Y
+-MaxDist Y
+-OrdRef Y
+-Temp *
+-Humidity *
+-WallAlpha *
+
+
+hk
+
+\bin\wps_scripts -w.\ -sRunAll.groovy input_dir=Input\StMartin\ output_dir=Output\StMartin\ confMaxSrcDist=20000 ReflDist=50 OccProb="SO" airTemp=15 humidity=70 dem=false diffHor=true diffVer=true ordRef=2 wallAlpha = 0.2 fastCompute=false

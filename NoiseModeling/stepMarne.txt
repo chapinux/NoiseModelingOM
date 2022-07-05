@@ -1,0 +1,31 @@
+CMD LINE WINDOWS (SFTP)
+---------------------------
+psftp pierre@137.121.123.4
+
+zip NM
+put NMSirene.zip
+unzip NMSirene.zip
+
+ou 
+
+mput * pour trasnférer plusieurs fichiers en même temps
+
+PUTTY (SSH)
+------------------------
+ssh pierre@137.121.123.4
+mdp
+chmod +x ./bin/wps_scripts
+
+./bin/wps_scripts -w./ -sRunAll.groovy input_dir=Input/PO/ output_dir=Output/PO/ fastCompute=true
+
+
+PUTTY (HPC)
+------------------------------
+eval "$(ssh-agent -s)"
+ssh-add ~/.ssh/mesocentre_rsa
+ssh -Y nfortin@hpc-login.u-strasbg.fr
+
+PUTTY (depuis le poste de travail)
+-----------------------------------------
+ scp -r * nfortin@hpc-login.u-strasbg.fr:TASOMA 
+ rsync -e ssh -avz * nfortin@hpc-login.u-strasbg.fr:TASOMA # À exécuter sur votre poste de travail
