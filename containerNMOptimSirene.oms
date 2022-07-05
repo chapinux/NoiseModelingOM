@@ -1,0 +1,78 @@
+val output_dir = Val[File]
+
+val listsource=Val[Seq[Int]]
+val listsource_Str=Val[String]
+
+val source1=Val[Int]
+val source2=Val[Int]
+val source3=Val[Int]
+
+val nbLogts=Val[Int]
+ 
+val container =  ContainerTask(
+    
+    image = "adoptopenjdk/openjdk11",
+    //commande de lancement 
+    command = """
+    cd localNoisemodeling ;
+    
+    mkdir ../resultsOptim;
+    bash ./bin/wps_scripts.sh -w./ -sRunAll_OptimSirene.groovy output_dir=../resultsOptim/ listSource=${listsource_Str};
+    """,
+    install = Seq("apt update", "apt install -y bash"),
+   
+  ) set (
+    resources += (workDirectory / "NoiseModeling", "localNoisemodeling"),
+    // quand le resultat de l'exec est à la racine , ça marche 
+    outputFiles += ( "resultsOptim" , output_dir),
+    //inputFiles += (),
+    inputs +=(listsource_Str),
+    outputs +=(listsource_Str)
+  )
+
+val getNbLogts = RTask(
+    //read CSVSource
+    """
+    df <- read.csv("resultsOptim/Count.csv")
+    nblogts<-df$SUM.NB_LOGTS.
+
+    """
+    ) set (
+    //return nbLogts
+     inputFiles += (output_dir,"resultsOptim"),
+     inputs +=(listsource_Str),
+     outputs += (nbLogts mapped "nblogts", listsource_Str)
+    )
+    
+
+val getStrSource = ScalaTask(
+    """
+    val listsource_Str = s"${Seq(source1,source2).mkString(",")}"
+    """
+    )set(
+        inputs +=(source1, source2),
+        outputs +=(listsource_Str)
+        )
+        
+ val exploGenetic = NSGA2Evolution(
+  genome = Seq(
+    source1 in (1 to 29 by 1),
+    source2 in (1 to 29 by 1)),
+  objective = Seq(-nbLogts),
+  evaluation = getStrSource -- container -- (getNbLogts hook display),
+  parallelism = 1,
+  termination = 50) 
+  
+val exploSimple = DirectSampling(
+    // getStrSource --
+    evaluation = getStrSource -- container -- (getNbLogts hook display), // here we evaluate the Replication task for each value of the sampling
+    sampling =
+        (source1 in (1 to 3 by 1)) x
+        (source2 in (4 to 6 by 1)) 
+        
+) 
+
+//exploSimple hook CopyFileHook(output_dir, workDirectory / "result/run_${listsource_Str}")
+exploGenetic hook (workDirectory / "result/run")
+//exploSimple hook CSVHook(workDirectory / "result/run/configurations.csv", values = Seq(source1, source2, nbLogts), header = "source1, source2, logts", arrayOnRow = true)
+

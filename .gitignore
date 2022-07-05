@@ -1,0 +1,8 @@
+profile*.csv
+*.log
+h2gisdb*
+/result/*
+/resultsOptim/*
+*.tar
+*.tgz
+population*.csv
