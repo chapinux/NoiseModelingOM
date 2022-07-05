@@ -23,3 +23,14 @@ Paramètres à faire varier
 hk
 
 \bin\wps_scripts -w.\ -sRunAll.groovy input_dir=Input\StMartin\ output_dir=Output\StMartin\ confMaxSrcDist=20000 ReflDist=50 OccProb="SO" airTemp=15 humidity=70 dem=false diffHor=true diffVer=true ordRef=2 wallAlpha = 0.2 fastCompute=false
+
+
+# Optimisation des Sirenes 
+
+## PreCalcul de la matrice d'attenuation
+
+.\bin\wps_scripts -w.\ -sRunAll_OptimSirene_Pre.groovy input_dir=Input\StMartin\ output_dir=Output\StMartin\ fastCompute=true confMaxSrcDist=2000 ReflDist=50
+
+## Calcul que pour x Sirenes avec la matrice precalculee
+
+.\bin\wps_scripts -w.\ -sRunAll_OptimSirene.groovy Rcv=Output\StMartin\RECEIVERS.shp Matrix=OutPut\StMartin\AttMatrix.shp Buildings=Input\StMartin\BUILD_GRID.shp output_dir=Output\StMartin\
