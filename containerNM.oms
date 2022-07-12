@@ -1,13 +1,12 @@
-val output_dir = Val[File]
-val input_dir = Val[File]
-
+val output_foldername = Val[File]
+val Observations_foldername = Val[File]
+val Model_foldername = Val[File]
 
 val confMaxSrcDist = Val[Int]
 val ReflDist= Val[Int]
-
 val OccProb= Val[String] 
-val airTemp=Val[Double] 
-val humidity=Val[Double] 
+val airTemp=Val[Int] 
+val humidity=Val[Int] 
 val dem=Val[Boolean]
 val diffHor=Val[Boolean]
 val diffVer=Val[Boolean] 
@@ -15,53 +14,93 @@ val refOrd=Val[Int]
 val wallAlpha=Val[Double] 
 val fastCompute=Val[Boolean]
 
+val diffLevel=Val[Double]
+val resultSEE = Val[Double]
 
+val getDiff = RTask("""
+    library(sf)
+    
+    Model <- sf::st_read("modelDir/LDAY_GEOM.shp")
+    Observations <- sf::st_read("NoiseModelling/Input/StMartin/RECEIVERS_NC.shp")
+    
+    diff <- sum((Model$HZ500 - Observations$leq_400)^2)
+    print(diff)
+    
+    """,
+    install = Seq("fakeroot apt-get update", "fakeroot apt-get install -y libudunits2-dev libgdal-dev libgeos-dev libproj-dev  "),
+    libraries = Seq("sf")
+    
+    ) set (
+        
+        resources += (workDirectory / "NoiseModelling"),
+        inputFiles += (output_foldername,"modelDir"),
+        outputs +=(diffLevel mapped "diff")
+        
+        )
 
 val container = 
   ContainerTask(
+    
     image = "adoptopenjdk/openjdk11",
     //commande de lancement 
     command = """
-    cd localNoisemodeling ;
-    
+    cd test;
     mkdir ../results;
-    bash ./bin/wps_scripts.sh -w./ -sRunAll.groovy input_dir=Input/StMartin/ output_dir=../results/ fastCompute=true confMaxSrcDist=${confMaxSrcDist} ReflDist=${ReflDist} OccProb=${OccProb} airTemp=${airTemp} humidity=${humidity} dem=${dem} diffHor=${diffHor} diffVer=${diffVer} refOrd=${refOrd} wallAlpha=${wallAlpha} fastCompute=${fastCompute};
+    ls /results/
+    pwd;
+    bash ./bin/wps_scripts.sh -w./ -sRunAll.groovy input_dir=Input/StMartin/ output_dir=../results/ airTemp=${airTemp} humidity=${humidity} dem=${dem} diffHor=${diffHor} diffVer=${diffVer} OccProb=${OccProb} refOrd=${refOrd} wallAlpha=${wallAlpha} fastCompute=${fastCompute};
+    ls /results/
     """,
-    install = Seq("apt update", "apt install -y bash"),
-   
+    install = Seq("apt update", "apt install -y bash")
   ) set (
-    resources += (workDirectory / "NoiseModeling", "localNoisemodeling"),
-    // quand le resultat de l'exec est à la racine , ça marche 
-    outputFiles += ( "results" , output_dir),
-    //inputFiles += (),
-    inputs +=(confMaxSrcDist, ReflDist),
-    outputs +=(confMaxSrcDist, ReflDist),
-    confMaxSrcDist := 20000,
+    confMaxSrcDist := 2000,
     ReflDist := 50,
-    OccProb:="SO",
-    airTemp:=15,
-    humidity:=70,
-    dem:=false,
+    dem:=true,
     diffHor:=true,
     diffVer:=true,
     refOrd:=2,
     wallAlpha := 0.2,
-    fastCompute:=false
+    //OccProb := "NO",
+    fastCompute:=false,
+    resources += (workDirectory / "NoiseModelling", "test"),
+    // quand le resultat de l'exec est à la racine , ça marche 
+    outputFiles += ( "results", output_foldername),
+    //outputFiles += ( "results" , Model_foldername),
+    //inputFiles += (),
+    inputs +=(airTemp, humidity, OccProb),
+    outputs +=(airTemp, humidity, OccProb)
     
   )
+  
 
+val exploGenetic = NSGA2Evolution(
+  genome = Seq(
+    airTemp in (1,50),
+    humidity in (1,100),
+    OccProb in List("SO", "SE", "NO", "NE", "Hom")), 
+  objective = Seq(diffLevel),
+  evaluation = container -- (getDiff hook display),
+  parallelism = 1,
+  termination = 20) //50 si OccProb varie
 
+// essayer One factor at a time task 
+// Valeurs exp pour chaque 
 
-val exploSimple = DirectSampling(
-    evaluation = container, // here we evaluate the Replication task for each value of the sampling
-    sampling =
-        (ReflDist in (40 to 50 by 10)) x
-        (confMaxSrcDist in (200 to 250 by 50))
-)
+  
+//hook CopyFileHook( output_foldername, workDirectory / "results") sort pour chaque run 
+
+//val exploSimple = DirectSampling(
+//    evaluation = container, 
+//    sampling =
+//        (ReflDist in (40 to 50 by 10)) x
+//        (confMaxSrcDist in (200 to 250 by 50))
+//)
 
  
 
-exploSimple hook CopyFileHook(output_dir, workDirectory / "result/run_${ReflDist}_confMax_${confMaxSrcDist}")
+//exploSimple hook CopyFileHook(output_dir, workDirectory / "result/run_${ReflDist}_confMax_${confMaxSrcDist}")
+exploGenetic hook (workDirectory / "results")
+
 
 //container hook CopyFileHook(output_dir, workDirectory / "result/run_${ReflDist}_confMax_${confMaxSrcDist}")
 
